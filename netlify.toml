@@ -1,0 +1,4 @@
+[build]
+  base = "product-holmes"
+  command = "npm install && npm run build"
+  publish = "product-holmes/dist"
