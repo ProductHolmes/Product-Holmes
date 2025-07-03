@@ -2,3 +2,6 @@
   base = "product-holmes"
   command = "npm install && npm run build"
   publish = "product-holmes/dist"
+
+[functions]
+  directory = "netlify/functions"
