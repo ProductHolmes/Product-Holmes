@@ -5,3 +5,7 @@
 
 [functions]
   directory = "product-holmes/netlify/functions"
+  
+[build.environment]
+  NODE_VERSION = "20"
+  GEMINI_API_KEY = "AIzaSyBPHN8G9sm21yb_51u50Dh7owiW0KxeU2E"
