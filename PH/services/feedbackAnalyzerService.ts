@@ -1,10 +1,5 @@
-
-
-import { GoogleGenAI, GenerateContentResponse } from "@google/genai";
 import { Issue, Source, SourceType, GeminiIssueResponse, GeminiSourceResponse, OccurrenceDetails } from '../types';
 import { GEMINI_MODEL_NAME, OCCURRENCE_CONTRIBUTION_RANGES } from '../constants';
-
-const API_KEY = process.env.API_KEY;
 
 const generateRandomAlphanumeric = (length: number = 7) => {
   const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
