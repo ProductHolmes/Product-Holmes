@@ -1,0 +1,11 @@
+[build]
+  base = "PH"
+  publish = "PH/dist"
+  command = "npm install && npm run build"
+
+[functions]
+  directory = "PH/netlify/functions"
+
+[build.environment]
+  NODE_VERSION = "20"
+  GEMINI_API_KEY = "placeholder"
