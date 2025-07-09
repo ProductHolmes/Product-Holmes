@@ -9,3 +9,6 @@ directory = "netlify/functions"
 [build.environment]
 NODE_VERSION = "20"
 GEMINI_API_KEY = "placeholder"
+
+[[plugins]]
+package = "@netlify/plugin-functions-install-core"
