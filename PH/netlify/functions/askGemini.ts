@@ -13,7 +13,7 @@ Start the list with: 1.
 `.trim();
 
   try {
-    const model = genAI.getGenerativeModel({ model: 'gemini-pro' });
+    const model = genAI.getGenerativeModel({ model: 'models/chat-bison-001' });
     const result = await model.generateContent(prompt);
     const text = await result.response.text();
 
