@@ -1,27 +1,24 @@
-import { Handler } from '@netlify/functions';
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { GoogleGenAI } from "@google/generative-ai";
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
+const genAI = new GoogleGenAI(process.env.GEMINI_API_KEY || '');
 
-const handler: Handler = async (event) => {
+const handler = async (event: any) => {
   const { product } = JSON.parse(event.body || '{}');
 
-  const prompt = `
-Act as a product feedback investigator. Generate 5 realistic product complaints for the product: "${product}".
-Only show problems, not praise.
-Start the list with: 1.
-`.trim();
+  const prompt = `Act as a product feedback investigator. Generate 5 realistic complaints for the product: "${product}". Only show problems, not praise.`;
+
+  const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' }); // ✅ v1-compatible model
 
   try {
-    const model = genAI.getGenerativeModel({ model: 'models/chat-bison-001' });
     const result = await model.generateContent(prompt);
-    const text = await result.response.text();
+    const response = result.response;
+    const text = await response.text();
 
     return {
       statusCode: 200,
       body: JSON.stringify({ issues: text }),
     };
-  } catch (error) {
+  } catch (error: any) {
     console.error('Gemini API failed:', error);
     return {
       statusCode: 500,
