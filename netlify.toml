@@ -7,7 +7,7 @@ command = "npm install && npm run build"
 directory = "netlify/functions"
 
 [build.environment]
-NODE_VERSION = "20.11.1"
+NODE_VERSION = "20"
 GEMINI_API_KEY = "placeholder"
 
 [[plugins]]
