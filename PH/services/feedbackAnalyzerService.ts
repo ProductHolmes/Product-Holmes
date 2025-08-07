@@ -1,6 +1,7 @@
-import { Issue, Source, SourceType, GeminiIssueResponse, GeminiSourceResponse, OccurrenceDetails } from '../types';
-import { GEMINI_MODEL_NAME, OCCURRENCE_CONTRIBUTION_RANGES } from '../constants';
+import { Issue, Source, SourceType, GeminiIssueResponse } from '../types';
+import { OCCURRENCE_CONTRIBUTION_RANGES } from '../constants';
 
+// --- Helper functions from your original file ---
 const generateRandomAlphanumeric = (length: number = 7) => {
   const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
   let result = '';
@@ -11,65 +12,78 @@ const generateRandomAlphanumeric = (length: number = 7) => {
 };
 
 const generateRandomDate = (): string => {
-  const year = 2020 + Math.floor(Math.random() * 6); // 2020-2025
-  const month = Math.floor(Math.random() * 12); 
-  const day = Math.floor(Math.random() * 28) + 1; 
+  const year = 2023 + Math.floor(Math.random() * 2); // Last 2 years
+  const month = Math.floor(Math.random() * 12);
+  const day = Math.floor(Math.random() * 28) + 1;
   return new Date(year, month, day).toISOString();
 };
 
 const mapGeminiSourceTypeToEnum = (geminiType: string): SourceType => {
     const sTypeLower = geminiType.toLowerCase().trim();
-    if (sTypeLower.includes('youtube transcript')) return SourceType.YouTube; 
-    if (sTypeLower.includes('youtube comment')) return SourceType.YouTube;
     if (sTypeLower.includes('youtube')) return SourceType.YouTube;
-    if (sTypeLower.includes('google article') || sTypeLower.includes('article')) return SourceType.GoogleArticles;
-    if (sTypeLower.includes('reddit post') || sTypeLower.includes('reddit')) return SourceType.RedditPosts;
-    if (sTypeLower.includes('twitter post') || sTypeLower.includes('tweet') || sTypeLower.includes('twitter')) return SourceType.Tweets;
-    if (sTypeLower.includes('trustpilot review') || sTypeLower.includes('trustpilot')) return SourceType.TrustpilotPosts;
-    
-    // Fallback if a more generic term is used by Gemini, attempt mapping
-    const matchedSourceType = Object.values(SourceType).find(st => st.toLowerCase() === sTypeLower);
-    if (matchedSourceType) {
-      return matchedSourceType;
-    }
-    
-    console.warn(`Unexpected source type from Gemini: '${geminiType}', defaulting to GoogleArticles.`);
-    return SourceType.GoogleArticles; 
+    if (sTypeLower.includes('google article')) return SourceType.GoogleArticles;
+    if (sTypeLower.includes('reddit')) return SourceType.RedditPosts;
+    if (sTypeLower.includes('twitter')) return SourceType.Tweets;
+    if (sTypeLower.includes('trustpilot')) return SourceType.TrustpilotPosts;
+    return SourceType.GoogleArticles; // Fallback
 };
 
-export const analyzeProductFeedback = async (productName: string, plan: string = 'free') => {
+// --- The Main Function ---
+export const analyzeProductFeedback = async (productName: string, plan: string | null = 'free'): Promise<Issue[]> => {
   const response = await fetch('/.netlify/functions/askGemini', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ product: productName }),
+    body: JSON.stringify({ product: productName, plan: plan }),
   });
 
-  // Check if the server responded with an error status code
   if (!response.ok) {
-    const errorData = await response.json().catch(() => ({ error: 'Failed to parse error response from server.' }));
-    console.error('Server responded with an error:', response.status, errorData);
-    throw new Error(errorData.error || `Request failed with status ${response.status}`);
+    const errorData = await response.json().catch(() => ({ error: 'Failed to parse error from server.' }));
+    throw new Error(errorData.error || `Analysis request failed with status ${response.status}`);
   }
 
-  const data = await response.json();
+  const geminiIssues: GeminiIssueResponse[] = await response.json();
 
-  if (!data.issues) {
-    throw new Error(data.error || 'No issues returned from Gemini.');
+  if (!Array.isArray(geminiIssues)) {
+    throw new Error('AI response was not in the expected format.');
   }
 
-  const parsedIssues = data.issues
-    .split(/\n+/)
-    .map((line: string) => line.replace(/^\d+\.\s*/, '').trim())
-    .filter(Boolean);
+  // Hydrate the clean AI data with additional details for the UI
+  return geminiIssues.map((geminiIssue, index): Issue => {
+    const issueId = `issue_${Date.now()}_${index}`;
+    
+    const mappedSources: Source[] = geminiIssue.sources.map((src, srcIndex) => ({
+      id: `${issueId}_source_${srcIndex}`,
+      type: mapGeminiSourceTypeToEnum(src.type),
+      url: src.url,
+      title: src.title,
+    }));
 
-  // --- THIS IS THE CORRECTED BLOCK ---
-  return parsedIssues.map((text: string, index: number) => ({
-    id: `ai_${Date.now()}_${index}`,
-    description: text,
-    category: 'General Feedback', // Provide a default category
-    sources: [], // Provide an empty array for sources
-    occurrenceDetails: {}, // Provide an empty object for details
-    totalOccurrences: 1,
-    lastDetected: new Date().toISOString(), // Provide a valid date string
-  })) as Issue[];
+    const occurrenceDetails: { [key in SourceType]?: number } = {};
+    let totalOccurrences = 0;
+    
+    const uniqueSourceTypes = new Set(mappedSources.map(s => s.type));
+    uniqueSourceTypes.forEach(sourceType => {
+        const range = OCCURRENCE_CONTRIBUTION_RANGES[sourceType];
+        if (range) {
+            const count = Math.floor(Math.random() * (range.max - range.min + 1)) + range.min;
+            occurrenceDetails[sourceType] = count;
+            totalOccurrences += count;
+        }
+    });
+
+    // Ensure at least a small number of occurrences if none were generated
+    if (totalOccurrences === 0) {
+        totalOccurrences = Math.floor(Math.random() * 20) + 1;
+    }
+
+    return {
+      id: issueId,
+      description: geminiIssue.description,
+      category: geminiIssue.category,
+      sources: mappedSources,
+      occurrenceDetails,
+      totalOccurrences,
+      lastDetected: generateRandomDate(),
+    };
+  });
 };
