@@ -12,3 +12,6 @@ GEMINI_API_KEY = "placeholder"
 
 [[plugins]]
 package = "@netlify/plugin-functions-install-core"
+
+[functions."askGemini"]
+  timeout = 40
