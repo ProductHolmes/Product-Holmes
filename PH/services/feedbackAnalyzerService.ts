@@ -36,7 +36,6 @@ const mapGeminiSourceTypeToEnum = (geminiType: string): SourceType => {
     console.warn(`Unexpected source type from Gemini: '${geminiType}', defaulting to GoogleArticles.`);
     return SourceType.GoogleArticles; 
 };
-import { Issue, SourceType } from '../types';
 
 export const analyzeProductFeedback = async (productName: string, plan: string = 'free') => {
   const response = await fetch('/.netlify/functions/askGemini', {
@@ -44,6 +43,13 @@ export const analyzeProductFeedback = async (productName: string, plan: string =
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ product: productName }),
   });
+
+  // Check if the server responded with an error status code
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({ error: 'Failed to parse error response from server.' }));
+    console.error('Server responded with an error:', response.status, errorData);
+    throw new Error(errorData.error || `Request failed with status ${response.status}`);
+  }
 
   const data = await response.json();
 
@@ -53,20 +59,17 @@ export const analyzeProductFeedback = async (productName: string, plan: string =
 
   const parsedIssues = data.issues
     .split(/\n+/)
-    .map(line => line.replace(/^\d+\.\s*/, '').trim())
+    .map((line: string) => line.replace(/^\d+\.\s*/, '').trim())
     .filter(Boolean);
 
-  return parsedIssues.map((text, index) => ({
+  // --- THIS IS THE CORRECTED BLOCK ---
+  return parsedIssues.map((text: string, index: number) => ({
     id: `ai_${Date.now()}_${index}`,
-    title: text,
     description: text,
-    source: 'AI',
-    sourceType: SourceType.GoogleArticles,
-    timestamp: Date.now(),
-    occurrences: 1,
+    category: 'General Feedback', // Provide a default category
+    sources: [], // Provide an empty array for sources
+    occurrenceDetails: {}, // Provide an empty object for details
     totalOccurrences: 1,
-    sentiment: null,
-    severity: 'medium',
-    tags: [],
+    lastDetected: new Date().toISOString(), // Provide a valid date string
   })) as Issue[];
 };
